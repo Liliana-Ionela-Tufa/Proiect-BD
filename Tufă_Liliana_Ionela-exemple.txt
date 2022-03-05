@@ -1,0 +1,94 @@
+--Exercitiul 11
+
+--Sa se afiseze in ordine alfabetica numele, prenumele pacientului si codul salonului (daca au fost internati, 
+--altfel se va afisa "Nu a fost internat/a.") pacientilor ce au suferit operatia "reconstructie nazala"
+
+select p.nume, p.prenume, s.id_salon
+from pacient p, salon s, operatie o
+where p.id_salon=s.id_salon and p.id_pacient = o.id_pacient
+and o.id_pacient in (select id_pacient
+                    from operatie
+                    where lower(nume_operatie) like '%reconstructie nazala%')
+order by 1;
+
+--Pentru toate operatiile din anul 2020 care au denumirea mai lunga
+--de 10 caractere sa se afiseze informatii legate de pacient.
+
+select 'Pacientul se numeste ' || p.nume || ' ' || p.prenume ||' si a suferit operatia' || ' ' || o.nume_operatie || '.' ||' Pacientul are resedinta in orasul '|| a.oras||'.' as "Informatii"
+from pacient p, realizeaza r, operatie o, adresa a
+where o.id_pacient = p.id_pacient and p.id_adresa = a.id_adresa and r.id_operatie = o.id_operatie
+and extract(year from r.data_operatie) = 2020 and length(o.nume_operatie) > 10;
+
+--Sa se afiseze codul salonului si numarul de pacienti 
+--internati in salonul/saloanele cu cele mai multe persoane.
+
+select s.id_salon, count(*)
+from salon s, pacient p
+where s.id_salon = p.id_salon
+having count(*) = (select max(count(*))
+                    from salon s, pacient p
+                    where s.id_salon = p.id_salon
+                    group by s.id_salon)
+group by s.id_salon
+                    
+--S-au stabilit noi mariri de salarii in cadrul spitalului astfel:
+--pentru salariatii angajati in 2000,  cresterea va fi de  30%,
+--pentru salariatii angajati in 2005,  cresterea va fi de  20%,
+--pentru salariatii angajati in 2015,  cresterea va fi de  10%,
+--Afisati noile salarii dupa marire si numele job-ului.
+
+select a.nume, a.prenume, j.nume_job, a.salariu,
+case to_char(a.data_angajarii, 'YYYY')
+    when  '2000' then a.salariu + 0.3*a.salariu
+    when  '2005' then a.salariu + 0.2*a.salariu
+    when  '2015' then a.salariu + 0.1*a.salariu
+else a.salariu
+end as Salariu_Marit
+from angajat a, job j
+where a.id_job = j.id_job
+order by a.salariu;
+
+                    
+--Afisati numele si prenumele pentru pacientii care parcurg o distanta mai mica sau egala cu ambulanta decat media distantelor. 
+
+with medie_distanta(dist) as
+(select avg(d.distanta)
+from ambulanta a, detalii_interventie d
+where a.id_detalii_interventie = d.id_detalii_interventie)
+select nume, prenume, d.distanta 
+from pacient, detalii_interventie d, ambulanta a, medie_distanta
+where pacient.id_pacient = a.id_pacient and a.id_detalii_interventie = d.id_detalii_interventie and d.distanta <= medie_distanta.dist;
+                 
+                 
+--Exercitiul 12
+--Sa se mareasca salariul angajatilor cu 20% din media salariilor.
+update angajat set
+salariu = salariu + 0.2* (select avg(salariu)
+                            from angajat)
+
+
+--Sa se scada cu 10% perioada de recuperare pentru pacientii cu varsta mai mica de 30 ani.
+
+update operatie set
+perioada_recuperare = perioada_recuperare - 0.1*perioada_recuperare
+where operatie.id_operatie in (select operatie.id_operatie
+                                from operatie, pacient p
+                                where p.id_pacient = operatie.id_pacient and extract(year from p.data_nasterii) >1991)
+
+
+                            
+-- Sa scada cu 10 zilele lucratoare ale angajatilor ce locuiesc in afara Bucurestiului.
+ update program set
+ nr_zile_lucratoare = nr_zile_lucratoare - 10 
+ where program.id_angajat not in (select a.id_angajat
+                                    from angajat a, adresa
+                                    where a.id_adresa= adresa.id_adresa and lower(adresa.oras) like 'bucuresti')                 
+
+
+--Exercitiul 13
+create sequence seq_id_salon
+start with 1
+increment by 2
+minvalue 1
+maxvalue 1000
+cycle;
